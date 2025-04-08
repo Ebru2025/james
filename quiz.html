@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Gaming with AI</title>
+<style>
+    body {
+      font-family: Comic Sans MS, cursive, sans-serif;
+      background: url('https://www.transparenttextures.com/patterns/cubes.png') repeat, linear-gradient(to right, #222, #555);
+      background-blend-mode: overlay;
+      color: white;
+      text-align: center;
+      padding: 2em;
+    }
+    .card { background: white; color: black; padding: 1em; border-radius: 10px; margin: auto; max-width: 600px; }
+    .options button {
+      display: block;
+      margin: 0.5em auto;
+      padding: 0.5em 1em;
+      border: none;
+      border-radius: 5px;
+      background: #ccc;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .correct { background: green !important; color: white; }
+    .wrong { background: red !important; color: white; animation: shake 0.3s; }
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); }
+      75% { transform: translateX(-5px); }
+      100% { transform: translateX(0); }
+    }
+    .hidden { display: none; }
+    #certificate { background: white; color: black; padding: 1em; border-radius: 10px; margin-top: 1em; display: none; }
+  </style>
+</head>
+<body>
+<h1 style="font-size: 2.5em; margin-bottom: 0.5em; font-weight: bold;">🔐 Interactive Cyber Security &amp; IT Awareness Quiz</h1><div id="start" style="background: rgba(255, 255, 255, 0.1); padding: 2em; border-radius: 12px; backdrop-filter: blur(4px); max-width: 500px; margin: auto; margin-top: 2em;">
+<input id="username" placeholder="Enter your name" style="padding: 0.5em; border-radius: 6px; border: none; width: 70%;" type="text"/>
+<br/><br/>
+<button onclick="startQuiz('adult')" style="margin: 0.5em; padding: 0.7em 1.2em; border-radius: 8px; background: #000; color: white; font-weight: bold; border: none; cursor: pointer;">Adults</button>
+<button onclick="startQuiz('kids')" style="margin: 0.5em; padding: 0.7em 1.2em; border-radius: 8px; background: orange; color: white; font-weight: bold; border: none; cursor: pointer;">Kids</button>
+</div>
+<div class="hidden" id="quiz">
+<div style="height: 10px; background: #333; border-radius: 5px; overflow: hidden; margin-bottom: 1em;">
+<div id="progress" style="height: 100%; width: 0%; background: limegreen; transition: width 0.3s;"></div>
+</div>
+<div class="card">
+<h2 id="question"></h2>
+<div class="options" id="options"></div>
+<p id="timer">⏳ 10</p>
+</div>
+</div>
+<div class="hidden" id="result">
+<h2>🎉 Congratulations, <span id="nameOut"></span>!</h2>
+<p>Your Score: <span id="score"></span>/100</p>
+<p id="badge"></p>
+<div id="certificate">
+<h3>📄 Certificate of Completion</h3>
+<p>This certifies that <strong id="certName"></strong></p>
+<p>has completed the Gaming with AI Quiz</p>
+<p>Score: <span id="certScore"></span>/100</p>
+<p><strong id="certBadge"></strong></p>
+</div>
+<br/>
+<button onclick="window.print()">Download Certificate</button>
+<button onclick="location.reload()">Restart</button>
+</div>
+<script>
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+    const questions = {
+      adult: [
+        ["What does 'https' stand for?", ["HyperText Transfer Protocol Secure", "High Text Transfer Protocol Server", "Hyperlink Transfer Protocol Standard", "Highspeed Text Protocol"], 0],
+        ["Which of the following is a strong password?", ["12345678", "password1", "$Tr0ngP@ssw0rd!", "qwerty"], 2],
+        ["What is phishing?", ["A way to cook fish", "A cyberattack to steal information", "An antivirus software", "A firewall setting"], 1],
+        ["Which device protects your network?", ["Router", "Modem", "Firewall", "Printer"], 2],
+        ["What is two-factor authentication?", ["Using two devices", "A second password", "Extra security method", "Double encryption"], 2],
+        ["Which of the following is malware?", ["Firewall", "Trojan", "Router", "Cloud"], 1],
+        ["What is a firewall?", ["A virus", "A network switch", "A security system", "A password"], 2],
+        ["VPN stands for?", ["Virtual Private Network", "Verified Personal Number", "Very Protected Net", "Video Protection Node"], 0],
+        ["Which is safest to click?", ["Unknown email", "Short URL", "HTTPS site", "Popup"], 2],
+        ["Best way to keep data safe?", ["Open WiFi", "Sharing login", "Strong passwords", "Use same password"], 2],
+      ],
+      kids: [
+        ["What should you not share online?", ["Your favorite color", "Your password", "Your pet’s name", "A cartoon"], 1],
+        ["What does a lock on a website mean?", ["Game inside", "It's night mode", "Safe website", "Broken website"], 2],
+        ["If you get a weird message, what should you do?", ["Click it!", "Ignore or tell an adult", "Reply fast", "Share it"], 1],
+        ["Which one is a computer virus?", ["Flu", "Trojan", "Cold", "Fever"], 1],
+        ["What is a password?", ["A secret code", "A game", "A drawing", "A story"], 0],
+        ["What should you do before clicking links?", ["Ask an adult", "Click fast", "Ignore it", "Tell a friend"], 0],
+        ["Is it okay to meet online friends alone?", ["Yes", "Maybe", "No", "If they’re nice"], 2],
+        ["What is a strong password?", ["1234", "abcdef", "MyDog#21", "YourName"], 2],
+        ["Should you download apps without permission?", ["Yes", "No", "Sometimes", "Ask a pet"], 1],
+        ["Can you share your address online?", ["Yes", "No", "If needed", "On birthday"], 1],
+      ]
+    };
+
+    let quizData, current = 0, score = 0, user = "", quizMode = "";
+    let timer;
+
+    function startQuiz(mode) {
+      const body = document.body;
+      if (mode === 'kids') {
+        body.style.background = "url('https://www.transparenttextures.com/patterns/stationery.png') repeat, linear-gradient(to right, #ffcc70, #b388eb)";
+        body.style.backgroundBlendMode = "overlay";
+      } else {
+        body.style.background = "url('https://www.transparenttextures.com/patterns/graphy.png') repeat, linear-gradient(to right, #2d2d2d, #555555)";
+        body.style.backgroundBlendMode = "overlay";
+      }
+      user = document.getElementById("username").value || "Anonymous";
+      quizMode = mode;
+      quizData = shuffleArray([...questions[mode]]);
+      document.getElementById("start").classList.add("hidden");
+      document.getElementById("quiz").classList.remove("hidden");
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const progress = Math.floor((current / quizData.length) * 100);
+      document.getElementById("progress").style.width = progress + "%";
+      if (current >= quizData.length) return endQuiz();
+      document.getElementById("question").textContent = quizData[current][0];
+      const opts = document.getElementById("options");
+      opts.innerHTML = "";
+      quizData[current][1].forEach((opt, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = opt;
+        btn.onclick = () => selectAnswer(i);
+        opts.appendChild(btn);
+      });
+      let time = 10;
+      document.getElementById("timer").textContent = `⏳ ${time}`;
+      timer = setInterval(() => {
+        time--;
+        document.getElementById("timer").textContent = `⏳ ${time}`;
+        if (time <= 0) {
+          clearInterval(timer);
+          selectAnswer(null);
+        }
+      }, 1000);
+    }
+
+    function selectAnswer(i) {
+      clearInterval(timer);
+      const correct = quizData[current][2];
+      const buttons = document.querySelectorAll("#options button");
+      buttons.forEach((btn, idx) => {
+        if (idx === correct) btn.classList.add("correct");
+        if (idx === i && idx !== correct) btn.classList.add("wrong");
+        btn.disabled = true;
+      });
+      if (i === correct) score += 10;
+      setTimeout(() => {
+        current++;
+        showQuestion();
+      }, 2000);
+    }
+
+    function getBadge(score) {
+      if (score >= 90) return "Gold Badge ✨";
+      if (score >= 80) return "Silver Badge";
+      return "Bronze Badge";
+    }
+
+    function endQuiz() {
+      document.getElementById("quiz").classList.add("hidden");
+      document.getElementById("result").classList.remove("hidden");
+      document.getElementById("nameOut").textContent = user;
+      document.getElementById("score").textContent = score;
+      const badge = getBadge(score);
+      document.getElementById("badge").textContent = badge;
+      document.getElementById("certificate").style.display = "block";
+      document.getElementById("certName").textContent = user;
+      document.getElementById("certScore").textContent = score;
+      document.getElementById("certBadge").textContent = badge;
+    }
+  </script>
+</body>
+</html>
